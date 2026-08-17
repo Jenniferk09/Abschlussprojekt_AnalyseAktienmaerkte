@@ -1,0 +1,41 @@
+{
+  "schrift_basis": 12,
+  "farbe_hintergrund": "#000000",
+  "farbe_karte_hg": "#15181d",
+  "farbe_karte_rand": "#2a2f37",
+  "farbe_text": "#e6e8eb",
+  "farbe_muted": "#9aa3af",
+  "farbe_akzent": "#3b8bed",
+  "farbe_gruen": "#0ca30c",
+  "farbe_gelb": "#e0a72c",
+  "farbe_rot": "#d03b3b",
+  "ez_reihenfolge": [
+    "status",
+    "chart",
+    "kpi",
+    "www"
+  ],
+  "ez_sicht_status": true,
+  "ez_sicht_chart": true,
+  "ez_sicht_kpi": true,
+  "ez_sicht_www": true,
+  "ez_spalte_banner": 1.2,
+  "ez_spalte_gauge": 1.0,
+  "ez_spalte_chips": 1.3,
+  "ez_hoehe_gauge": 180,
+  "ez_hoehe_chart": 430,
+  "ez_hoehe_www": 380,
+  "ue_reihenfolge": [
+    "ampel",
+    "kurse",
+    "tabelle",
+    "maxdd"
+  ],
+  "ue_sicht_ampel": true,
+  "ue_sicht_kurse": true,
+  "ue_sicht_tabelle": true,
+  "ue_sicht_maxdd": true,
+  "ue_hoehe_kurs": 300,
+  "ue_hoehe_maxdd": 380,
+  "gesperrt": true
+}
