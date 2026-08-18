@@ -477,12 +477,14 @@ def ansicht_einzelindex(index_key: str):
         with c3:
             st.markdown("**Signal-Lage**")
             signal_chips(res_tag)
-        if res["marktbreite_stand"] is not None or res["pcr_stand"] is not None:
+        marktbreite_stand = res.get("marktbreite_stand")
+        pcr_stand = res.get("pcr_stand")
+        if marktbreite_stand is not None or pcr_stand is not None:
             teile = []
-            if res["marktbreite_stand"] is not None:
-                teile.append(f'Marktbreite-Daten: Stand {res["marktbreite_stand"].strftime("%d.%m.%Y")}')
-            if res["pcr_stand"] is not None:
-                teile.append(f'PCR-Daten: Stand {res["pcr_stand"].strftime("%d.%m.%Y")}')
+            if marktbreite_stand is not None:
+                teile.append(f'Marktbreite-Daten: Stand {marktbreite_stand.strftime("%d.%m.%Y")}')
+            if pcr_stand is not None:
+                teile.append(f'PCR-Daten: Stand {pcr_stand.strftime("%d.%m.%Y")}')
             st.caption(" · ".join(teile) + " — nicht live, siehe README \"Daten aktuell halten\".")
 
     def _b_chart():
