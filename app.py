@@ -164,8 +164,27 @@ st.markdown(
 # 3. Daten (gecached – Kursdaten werden je Index max. alle 6 Stunden neu geladen)
 # ============================================================================
 @st.cache_data(ttl=60 * 60 * 6, show_spinner="Lade aktuelle Kursdaten …")
-def lade_index(index_key: str) -> dict:
+def _lade_index_roh(index_key: str) -> dict:
     return ac.analysiere_index(index_key)
+
+
+def lade_index(index_key: str) -> dict:
+    """Wie ``_lade_index_roh``, fängt aber Fehler beim Live-Datenabruf (Kurse,
+    Volatilitätsindex) ab und zeigt eine verständliche Meldung statt eines
+    rohen Absturzes – z. B. bei einer vorübergehenden Rate-Begrenzung von
+    Yahoo Finance, was auf gehosteten Umgebungen häufiger vorkommt als lokal."""
+    try:
+        return _lade_index_roh(index_key)
+    except Exception as exc:
+        name = ac.INDICES.get(index_key, {}).get("name", index_key)
+        st.error(
+            f"⚠️ Daten für **{name}** konnten gerade nicht geladen werden "
+            f"(Live-Abruf von Kurs- bzw. Volatilitätsdaten fehlgeschlagen). "
+            f"Das ist meist vorübergehend, z. B. eine kurze Rate-Begrenzung "
+            f"bei Yahoo Finance – bitte die Seite in ein bis zwei Minuten "
+            f"neu laden.\n\nTechnische Details: `{exc}`"
+        )
+        st.stop()
 
 
 def de_pct(x: float, stellen: int = 1, signed: bool = False) -> str:
