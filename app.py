@@ -364,14 +364,14 @@ def chart_kurs_mit_ampel(res: dict, kompakt: bool = False, mark_ts=None, hoehe: 
 
 
 def chart_was_waere_wenn(res: dict, hoehe: int | None = None) -> go.Figure:
-    www, df = res["was_waere_wenn"], res["df"]
+    www = res["was_waere_wenn"]
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=df.index, y=www["equity_buy_hold"], mode="lines", name="Buy & Hold",
+        x=www["equity_buy_hold"].index, y=www["equity_buy_hold"], mode="lines", name="Buy & Hold",
         line=dict(color=COL_MUTED, width=1.5),
         hovertemplate="%{x|%d.%m.%Y}<br>Buy & Hold: %{y:.2f}<extra></extra>"))
     fig.add_trace(go.Scatter(
-        x=df.index, y=www["equity_strategie"], mode="lines",
+        x=www["equity_strategie"].index, y=www["equity_strategie"], mode="lines",
         name="Ampel-Strategie (Ausstieg bei Rot)",
         line=dict(color=COL_ACCENT, width=1.8),
         hovertemplate="%{x|%d.%m.%Y}<br>Ampel: %{y:.2f}<extra></extra>"))
@@ -458,6 +458,13 @@ def ansicht_einzelindex(index_key: str):
         with c3:
             st.markdown("**Signal-Lage**")
             signal_chips(res_tag)
+        if res["marktbreite_stand"] is not None or res["pcr_stand"] is not None:
+            teile = []
+            if res["marktbreite_stand"] is not None:
+                teile.append(f'Marktbreite-Daten: Stand {res["marktbreite_stand"].strftime("%d.%m.%Y")}')
+            if res["pcr_stand"] is not None:
+                teile.append(f'PCR-Daten: Stand {res["pcr_stand"].strftime("%d.%m.%Y")}')
+            st.caption(" · ".join(teile) + " — nicht live, siehe README \"Daten aktuell halten\".")
 
     def _b_chart():
         st.plotly_chart(chart_kurs_mit_ampel(res, mark_ts=status["datum"], hoehe=V("ez_hoehe_chart")),

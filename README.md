@@ -21,9 +21,11 @@ Die App öffnet sich im Browser (Standard: http://localhost:8501).
 | Datei | Zweck |
 |---|---|
 | `app.py` | Streamlit-Oberfläche (Ansichten, Diagramme) |
-| `ampel_core.py` | Kernlogik: Kurse laden, Signale, Ampel, Was-wäre-wenn – reproduziert `Risikoampel Kombiniert.ipynb` exakt |
-| `configs/*_ampel_konfiguration.json` | die im Notebook per Suche bestimmte Ampel-Definition (Signale + Schwellen), je Index |
-| `_referenz/*_Ampel_Zeitreihe.csv` | Referenz-Zeitreihen aus dem Notebook, nur zur Validierung |
+| `ampel_core.py` | Kernlogik: Kurse/Marktbreite/Volatilität/PCR laden, Signale, Ampel, Was-wäre-wenn – reproduziert `Risikoampel Kombiniert.ipynb` exakt |
+| `configs/*_ampel_konfiguration.json` | die im Notebook per Suche (mit Train/Test-Split) bestimmte Ampel-Definition (Signale + Schwellen), je Index |
+| `marktbreite_daten/*.csv` | Marktbreite je Index (Anteil Mitglieder über SMA20), gebündelt statt live – siehe "Daten aktuell halten" |
+| `pcr_daten.csv` | marktweite Put/Call-Ratio, gebündelt statt live – siehe "Daten aktuell halten" |
+| `_referenz/*_Ampel_Zeitreihe.csv` | Referenz-Zeitreihen zur Validierung (aus `ampel_core` selbst erzeugt, da das Notebook keinen fertigen Export mehr bereitstellt) |
 | `layout_config.json` | Dashboard-Layout/Design (entsteht erst beim Einfrieren, siehe unten) |
 | `requirements.txt` | Abhängigkeiten |
 
@@ -48,19 +50,46 @@ Vorgabe zurück (wirkt nur auf die noch nicht gespeicherte Live-Vorschau).
 
 ## Methodik (Kurzfassung)
 
-Die Ampel ist **rein kursbasiert**. Aus vier Regeln – Kurs unter SMA20 / SMA100 /
-SMA200 und fallender SMA20 – wird der **Belastungsgrad** gebildet (Anteil gerade
-zutreffender Regeln, 0–1). Daraus die Ampel: **Grün** = 0 belastet, **Rot** =
-alle 4 belastet, **Gelb** dazwischen. Dieselbe Kombination gilt für alle vier
-Indizes (im Notebook per Brute-Force-Suche über das Calmar-Kriterium bestimmt).
+Die Ampel kombiniert **vier Indikator-Familien**: Trend (SMA20/100/200-Regeln
+plus Death-Cross-Regime), Marktbreite (Anteil Indexmitglieder über SMA20),
+Volatilität (index-eigener Vol-Index über seiner Rot-Schwelle) und Sentiment
+(marktweite Put/Call-Ratio im obersten Dezil). Aus den neun gewählten Signalen
+wird der **Belastungsgrad** gebildet (Anteil "schlechter" Signale, 0–1). Daraus
+die Ampel: **Grün** bei 0 % belastet, **Rot** ab 75 % belastet, **Gelb**
+dazwischen. Dieselbe Kombination gilt für alle vier Indizes – im Notebook per
+Brute-Force-Suche mit **Train/Test-Split** bestimmt (Suche nur auf Daten bis
+2019, unabhängige Validierung ab 2020) und pro Index über ein eigenes
+Bewertungsfenster geprüft (erst ab dem Tag, an dem alle Signale für diesen
+Index verfügbar sind).
 
-Weil die Definition nur Kurse braucht (keine Marktbreite-/Put-Call-Daten), ist
-die Ampel **live** aus Yahoo-Finance-Kursdaten berechenbar. Die Kurse werden je
-Index bis zu 6 Stunden gecached.
+Kurse und die Volatilitätsindizes (VIX/VXD/VXN live über Yahoo Finance, RVX für
+Russell 2000 über einen CBOE-Fallback) sind **live** abrufbar und werden je
+Index bis zu 6 Stunden gecached. Marktbreite und Put/Call-Ratio sind dagegen
+**nicht live verfügbar** (siehe unten) und liegen als mit der App gebündelte
+Dateien vor.
+
+## Daten aktuell halten
+
+`marktbreite_daten/*.csv` (je Index) und `pcr_daten.csv` sind TradingView-
+Exporte ohne bekannte Live-API und werden **nicht** bei jedem Aufruf neu
+geladen. Das hat eine sichtbare Folge: Der "aktuelle Tag" der Ampel fällt
+automatisch auf den letzten Tag zurück, an dem alle neun Pflichtsignale
+auswertbar sind – bleiben Marktbreite/PCR tagelang unaktualisiert, hinkt die
+Ampel entsprechend hinterher (in der App als Datenstand-Hinweis sichtbar).
+
+Zum Aktualisieren: neue Exporte besorgen (je Index die "20 SMA"-Marktbreite-
+Datei bzw. die marktweite PCR-Datei), die bestehenden Dateien in
+`marktbreite_daten/` bzw. `pcr_daten.csv` ersetzen, committen und auf den
+`risikoampel-dashboard`-Branch pushen – Streamlit Cloud deployt automatisch
+neu.
 
 ## Validierung
 
-`ampel_core` reproduziert die Ampel des Notebooks zu **100 %** (Abgleich gegen
-`_referenz/*_Ampel_Zeitreihe.csv`, ~4.700 Handelstage je Index).
+`ampel_core` reproduziert die Ampel des Notebooks (Abgleich der Fenster-
+Startdaten, Anteil-Rot und Calmar-Größenordnung je Index gegen die
+Notebook-Ausgabe). `_referenz/*_Ampel_Zeitreihe.csv` wird direkt aus
+`ampel_core` selbst erzeugt (das Notebook liefert seit dem Umbau auf vier
+Indikator-Familien keinen fertigen CSV-Export mehr) und dient als
+Regressionsbasis für künftige Änderungen.
 
 > Explorative Analyse historischer Daten – keine Anlageberatung.
