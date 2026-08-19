@@ -639,8 +639,8 @@ def _dashboard_editor():
 def main():
     st.title("🚦 Risikoampel für US-Aktienindizes")
     st.caption("Eine gemeinsame, indikatorübergreifende Ampel (Grün / Gelb / Rot) für "
-               "S&P 500, Dow Jones, NASDAQ 100 und Russell 2000 – berechnet aus "
-               "gleitenden Durchschnitten, tagesaktuell aus Kursdaten.")
+               "S&P 500, Dow Jones, NASDAQ 100 und Russell 2000 – kombiniert Trend, "
+               "Marktbreite, Volatilität und Sentiment (Put/Call-Ratio).")
 
     with st.sidebar:
         st.header("Ansicht")
@@ -654,14 +654,23 @@ def main():
         with st.expander("Wie funktioniert die Ampel?"):
             beispiel = ac.lade_konfiguration("SP500")
             st.markdown(
-                "Aus vier einfachen Kursregeln (Kurs unter SMA20/100/200, SMA20 fällt) "
-                "wird der **Belastungsgrad** gebildet: der Anteil gerade zutreffender "
-                "Regeln (0 bis 1).\n\n"
-                f"- **Grün**: Belastungsgrad ≤ {de_num(beispiel['gruen_max'])} (keine Regel belastet)\n"
-                f"- **Rot**: Belastungsgrad ≥ {de_num(beispiel['rot_min'])} (alle Regeln belastet)\n"
+                "Aus **9 Signalen aus 4 Indikator-Familien** wird der **Belastungsgrad** "
+                "gebildet: der Anteil gerade zutreffender Signale (0 bis 1).\n\n"
+                "- **Trend**: Kurs unter SMA20/100/200, SMA20/100 fällt, Death-Cross-Regime "
+                "(SMA20 seit Kreuzung unter SMA200)\n"
+                "- **Marktbreite**: weniger als 50 % der Indexmitglieder über ihrem SMA20\n"
+                "- **Volatilität**: der index-eigene Volatilitätsindex (VIX/VXD/VXN/RVX) "
+                "über seiner Rot-Schwelle\n"
+                "- **Sentiment**: die marktweite Put/Call-Ratio im obersten Dezil ihrer "
+                "bisherigen Historie\n\n"
+                f"- **Grün**: Belastungsgrad ≤ {de_num(beispiel['gruen_max'])}\n"
+                f"- **Rot**: Belastungsgrad ≥ {de_num(beispiel['rot_min'])}\n"
                 "- **Gelb**: dazwischen\n\n"
-                "Dieselbe Kombination gilt für alle vier Indizes. Die Was-wäre-wenn-"
-                "Simulation steigt an Rot-Tagen aus (Cash, ohne Kosten) und sonst voll ein.")
+                "Dieselbe Kombination gilt für alle vier Indizes (per Brute-Force-Suche "
+                "mit Train/Test-Split bestimmt). Die Was-wäre-wenn-Simulation steigt an "
+                "Rot-Tagen aus (Cash, ohne Kosten) und sonst voll ein. Kurse und "
+                "Volatilitätsindizes sind live, Marktbreite und Put/Call-Ratio nicht "
+                "(siehe Datenstand-Hinweis unten bzw. README).")
         st.caption("Daten: Yahoo Finance. Explorativ, keine Anlageberatung.")
 
         st.divider()
@@ -669,7 +678,6 @@ def main():
             editor_an = st.checkbox("🔧 Dashboard anpassen", key="editor_an_cb")
         else:
             editor_an = False
-            st.caption("🔒 Layout ist eingefroren.")
 
     if editor_an:
         _dashboard_editor()
