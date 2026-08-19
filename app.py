@@ -35,9 +35,9 @@ KONFIG_PFAD = Path(__file__).parent / "layout_config.json"
 
 STANDARD_CFG = {
     "schrift_basis": 12,
-    "farbe_hintergrund": "#000000",
-    "farbe_karte_hg": "#15181d",
-    "farbe_karte_rand": "#2a2f37",
+    "farbe_hintergrund": "#293133",
+    "farbe_karte_hg": "#3c464a",
+    "farbe_karte_rand": "#4c575b",
     "farbe_text": "#e6e8eb",
     "farbe_muted": "#9aa3af",
     "farbe_akzent": "#3b8bed",
