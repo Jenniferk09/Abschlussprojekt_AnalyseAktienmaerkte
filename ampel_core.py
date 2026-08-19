@@ -44,26 +44,36 @@ START_DATE_DOWNLOAD = "1900-01-01"
 PCR_MA_FENSTER = 10
 PCR_MIN_HISTORIE = 252  # ~1 Handelsjahr Vorlauf für ein stabiles Perzentil (expanding window)
 
-# CBOE stellt die offizielle RVX-Tageshistorie bereit, da ^RVX bei Yahoo
-# Finance nicht abrufbar ist (siehe Volatilitätsindizes/RVX-Notebook).
-RVX_CBOE_URL = "https://cdn.cboe.com/api/global/us_indices/daily_prices/RVX_History.csv"
+# CBOE stellt die offizielle Tageshistorie einiger Volatilitätsindizes direkt
+# bereit. Für ^RVX ist das der einzige Weg (bei Yahoo Finance nicht abrufbar,
+# siehe Volatilitätsindizes/RVX-Notebook). Für ^VXD ist Yahoo Finance zwar
+# grundsätzlich verfügbar, liefert die Reihe aber immer wieder über Wochen
+# lückenhaft/unvollständig (beobachtet ab 17.07.2026) – deshalb hier ebenfalls
+# der zuverlässigere CBOE-Feed statt yfinance.
+CBOE_VOL_URLS = {
+    "RVX": "https://cdn.cboe.com/api/global/us_indices/daily_prices/RVX_History.csv",
+    "VXD": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VXD_History.csv",
+}
 
 AMPEL_FARBEN = ["Grün", "Gelb", "Rot"]
 AMPEL_FARBCODES = {"Grün": "#0ca30c", "Gelb": "#e0a72c", "Rot": "#d03b3b"}
 
 # Reihenfolge der Indizes für Überblicksdarstellungen. vol_ticker/vol_local:
-# index-eigener Volatilitätsindex (live via Yahoo Finance bzw. CBOE-Fallback
-# für RVX); vol_schwelle: datenbasiert hergeleitete Rot-Schwelle je Vol-Index
-# (siehe Volatilitätsindizes/*.ipynb).
+# index-eigener Volatilitätsindex – live via Yahoo Finance, außer vol_local
+# ist gesetzt (Kürzel aus CBOE_VOL_URLS), dann über den CBOE-CDN-Feed: RVX ist
+# bei Yahoo Finance gar nicht abrufbar, VXD liefert Yahoo Finance immer wieder
+# über Wochen lückenhaft (beobachtet ab 17.07.2026, s. CBOE_VOL_URLS oben).
+# vol_schwelle: datenbasiert hergeleitete Rot-Schwelle je Vol-Index (siehe
+# Volatilitätsindizes/*.ipynb).
 INDICES = {
     "SP500":       {"name": "S&P 500",      "ticker": "^GSPC",
-                    "vol_ticker": "^VIX", "vol_local": False, "vol_schwelle": 30},
+                    "vol_ticker": "^VIX", "vol_local": None, "vol_schwelle": 30},
     "DowJones":    {"name": "Dow Jones",    "ticker": "^DJI",
-                    "vol_ticker": "^VXD", "vol_local": False, "vol_schwelle": 27},
+                    "vol_ticker": "^VXD", "vol_local": "VXD", "vol_schwelle": 27},
     "NASDAQ100":   {"name": "NASDAQ 100",   "ticker": "^NDX",
-                    "vol_ticker": "^VXN", "vol_local": False, "vol_schwelle": 33},
+                    "vol_ticker": "^VXN", "vol_local": None, "vol_schwelle": 33},
     "Russell2000": {"name": "Russell 2000", "ticker": "^RUT",
-                    "vol_ticker": None, "vol_local": True, "vol_schwelle": 34},
+                    "vol_ticker": None, "vol_local": "RVX", "vol_schwelle": 34},
 }
 
 # Verständliche Beschriftung der Kandidatensignale (Zustand "schlecht", wenn …)
@@ -127,10 +137,12 @@ def lade_kurse(ticker: str, start: str = START_DATE_DOWNLOAD) -> pd.DataFrame:
     return df
 
 
-def _fetch_rvx_cboe() -> pd.DataFrame:
-    """Lädt die RVX-Tageshistorie von der CBOE (^RVX ist bei Yahoo Finance
-    nicht abrufbar) und bringt sie auf dasselbe Schema wie yfinance-Daten."""
-    req = urllib.request.Request(RVX_CBOE_URL, headers={"User-Agent": "Mozilla/5.0"})
+def _fetch_cboe_vol(kuerzel: str) -> pd.DataFrame:
+    """Lädt die Tageshistorie eines Volatilitätsindex direkt von der CBOE
+    (zuverlässiger als yfinance für ^RVX und ^VXD, siehe CBOE_VOL_URLS) und
+    bringt sie auf dasselbe Schema wie yfinance-Daten."""
+    url = CBOE_VOL_URLS[kuerzel]
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     raw = urllib.request.urlopen(req, timeout=60).read().decode("utf-8", "replace")
     df = pd.read_csv(StringIO(raw))
     df.columns = [c.strip().title() for c in df.columns]
@@ -141,9 +153,10 @@ def _fetch_rvx_cboe() -> pd.DataFrame:
 
 def lade_vol_index(cfg: dict) -> pd.Series:
     """Lädt den index-eigenen Volatilitätsindex: live über Yahoo Finance,
-    oder – für RVX (Russell 2000) – über den CBOE-CDN-Fallback."""
+    oder – für die in CBOE_VOL_URLS gelisteten Kürzel (RVX, VXD) – über den
+    zuverlässigeren CBOE-CDN-Feed."""
     if cfg["vol_local"]:
-        v = _fetch_rvx_cboe()
+        v = _fetch_cboe_vol(cfg["vol_local"])
     else:
         v = lade_kurse(cfg["vol_ticker"])
     reihe = v["Close"]
